@@ -4,21 +4,17 @@
 # Write a script to check the health status of the system
 
 # descriptions(.txt->.html) vs images(.tiff->jpeg)
+import smtplib, ssl
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import datetime
-import requests
 import os
-import sys
-
+import psutil
+import socket
 from PIL import Image
-from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate,Paragraph, Spacer, Table
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
-from reportlab.graphics.shapes import Drawing
-from reportlab.graphics.charts.piecharts import Pie
-from reportlab.lib.units import inch
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import letter
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 file_path = "../final_google/suppliers/"
 
@@ -35,8 +31,6 @@ def convert_im(filename):
         im.save(new_file, "JPEG", quality=100)
         # print(new_file)
         return new_file
-
-
 def convert_txt():
     l_dict=[]
     for filename in os.listdir(file_path):
@@ -59,9 +53,9 @@ def convert_txt():
     return l_dict
 
 
-
-
 #generate pdf
+# reports.generate_report(attachment, title, paragraph)
+# name, weight
 def generate_pdf():
     data_name=[]
     data_weight=[]
@@ -97,36 +91,95 @@ def generate_pdf():
     report.build(story)
 
 
-
-
-generate_pdf()
-
-
-
 #send it by email
-
-
-
-
-
-
-
-
-# reports.generate_report(attachment, title, paragraph)
-# name, weight
-
-
-
-
-
-
-
 #emails.generate_email() and emails.send_email()
 
 
+def email_sending(subject,body,pdf_need):
+    # Create a multipart message and set headers
+
+    sender_email = "vlastelin3212@gmail.com"
+    receiver_email = ['supermeatvlad@gmail.com', 'julia1melnichenko@gmail.com']
+    password = 'vbhf2212'  # input("Type your password and press enter:")
+    for i in receiver_email:
+        message = MIMEMultipart()
+        message["From"] = sender_email
+        message["To"] = i
+        message["Subject"] = subject
+        # message["Bcc"] = receiver_email  # Recommended for mass emails
+        print(message)
+        # Add body to email
+        message.attach(MIMEText(body, "plain"))
+        part = MIMEBase("application", "octet-stream")
+        if pdf_need=="yes":
+
+            filename = os.path.join(file_path,"Processed.pdf")  # file path
+
+        # Open PDF file in binary mode
+            with open(filename, "rb") as attachment:
+            # Add file as application/octet-stream
+            # Email client can usually download this automatically as attachment
+
+                part.set_payload(attachment.read())
+
+        # Encode file in ASCII characters to send by email
+            encoders.encode_base64(part)
+
+        # Add header as key/value pair to attachment part
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename= {filename}",
+            )
+
+        # Add attachment to message and convert message to string
+            message.attach(part)
+        text = message.as_string()
+
+        # Log in to server using secure context and send email
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.set_debuglevel(1)
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, text)
+
+
+subject = "Upload Completed - Online Fruit Store"
+body = "All fruits are uploaded to our website successfully. A detailed list is attached to this email."
+
+
+
+
+
 #health_check
+def health_check():
 #cpu usage %, avaliable disc space is lower than %, avaliable memory is less than MB,
-# hostname "localhost" cannot be resolved   to "127.0.0.1"
+    cpu_percent=psutil.cpu_percent()
+    print("cpu_percent=",psutil.virtual_memory().percent) # gives an object with many fields
+    if cpu_percent>80:
+        subject_health ='Error - CPU usage is over 80%'
+    #Available disk space is lower than 20%
+    disk_space=psutil.disk_usage("C:/").percent
+    print("disk_space=",disk_space)
+    if disk_space<20:
+        subject_health ='Error - Available disk space is less than 20%'
+    # you can convert that object to a dictionary
+    # print(dict(psutil.virtual_memory()._asdict()))
+
+    # hostname "localhost" cannot be resolved   to "127.0.0.1"
+    hostname=socket.gethostbyname(socket.gethostname()) # print(socket.getfqdn()) #Moon-PC
+    print("hostname=",hostname)
+    if hostname!="127.0.0.1":
+        subject_health='Error - hostname "localhost" cannot be resolved to "127.0.0.1"'
+    print("sub=",subject_health)
+    if subject_health!="":
+        body_health = "Please check your system and resolve the issue as soon as possible "
+        email_sending(subject_health,body_health,"no")
+
+generate_pdf()
+email_sending(subject,body,"yes")
+health_check()
+
 
 
 
