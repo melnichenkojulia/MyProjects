@@ -24,6 +24,7 @@ def convert_im(filename):
     # print(filename)
     if filename.endswith('.tiff'):
         im = Image.open(str(os.path.join(file_path + filename)))
+        im = im.resize((int(600), int(400)))
 
 
         new_file = os.path.join(file_path + filename[:-4] + "jpeg")
@@ -174,7 +175,7 @@ def health_check():
     print("sub=",subject_health)
     if subject_health!="":
         body_health = "Please check your system and resolve the issue as soon as possible "
-        email_sending(subject_health,body_health,"no")
+        email_sending(subject_health, body_health, "no")
 
 generate_pdf()
 email_sending(subject,body,"yes")

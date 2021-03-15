@@ -1,0 +1,120 @@
+
+#!/usr/bin/env python3
+
+import smtplib, ssl
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import datetime
+import os
+import psutil
+import socket
+from PIL import Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate
+
+file_path="supplier-data/images/"
+
+def convert_im(filename):
+
+
+    print(filename)
+    if filename.endswith('.tiff'):
+        im = Image.open(str(os.path.join(file_path + filename)))
+        im = im.resize((int(600), int(400)))
+        im = im.convert("RGB")
+
+        new_file = os.path.join(file_path + filename[:-4] + "jpeg")
+        im.thumbnail(im.size)
+        im.save(new_file, "JPEG", quality=100)
+        print(new_file)
+        return new_file
+
+for i in os.listdir(file_path):
+        convert_im(i)
+
+
+######
+
+
+#!/usr/bin/env python3
+import requests
+import os
+
+url = 'http://localhost/upload/'
+for file in os.listdir('supplier-data/images'):
+  print(file)
+  with open('supplier-data/images/'+file, 'rb') as f:
+    requests.post(url, files={'file': f})
+
+######################
+
+#!/usr/bin/env python3
+file_path = "/tmp/"
+
+import smtplib, ssl
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import os
+
+
+
+
+def email_sending(subject,body,pdf_need):
+    # Create a multipart message and set headers
+
+    sender_email = "automation@example.com"
+    receiver_email = ['student-01-2ce32f190bf7@example.com']
+    password = ''  # input("Type your password and press enter:")
+    for i in receiver_email:
+        message = MIMEMultipart()
+        message["From"] = sender_email
+        message["To"] = i
+        message["Subject"] = subject
+        # message["Bcc"] = receiver_email  # Recommended for mass emails
+        print(message)
+        # Add body to email
+        message.attach(MIMEText(body, "plain"))
+        part = MIMEBase("application", "octet-stream")
+        if pdf_need=="yes":
+
+            filename = os.path.join(file_path,"Processed.pdf")  # file path
+
+        # Open PDF file in binary mode
+            with open(filename, "rb") as attachment:
+            # Add file as application/octet-stream
+            # Email client can usually download this automatically as attachment
+
+                part.set_payload(attachment.read())
+
+        # Encode file in ASCII characters to send by email
+            encoders.encode_base64(part)
+
+        # Add header as key/value pair to attachment part
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename=processed.pdf",
+            )
+
+        # Add attachment to message and convert message to string
+            message.attach(part)
+        text = message.as_string()
+
+        # Log in to server using secure context and send email
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP() as server:
+        server.set_debuglevel(1)
+        server.connect()
+        #server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, text)
+
+
+subject = "Upload Completed - Online Fruit Store"
+body = "All fruits are uploaded to our website successfully. A detailed list is attached to this email."
+
+
+email_sending(subject,body,"yes")
